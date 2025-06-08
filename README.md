@@ -1,4 +1,3 @@
-# Azure-Powered-CRM-Reseller-Analytics-Compliance-Dashboard
 # Azure-Powered CRM Reseller Analytics & Compliance Dashboard
 
 [![Azure ML SDK v2](https://img.shields.io/badge/Azure%20ML-SDK%20v2-blue)](https://learn.microsoft.com/azure/machine-learning/)  
