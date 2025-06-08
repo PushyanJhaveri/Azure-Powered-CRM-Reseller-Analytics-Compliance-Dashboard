@@ -12,7 +12,7 @@ This end-to-end solution:
 1. **Ingests** CRM & reseller data from Azure SQL Database 
 2. **Cleans & features** it in Python (Pandas, custom utils)  
 3. **Trains** Random Forest, XGBoost & HGB models in Azure ML  
-4. **Registers & deploys** tge best model as a real-time endpoint  
+4. **Registers & deploys** the best model as a real-time endpoint  
 5. **Visualizes** commissions, compliance flags & forecasts in Tableau  
 
 ---
