@@ -1,27 +1,66 @@
-# train.py
-import os, argparse
-import pandas as pd, numpy as np
+# src/train.py
+import os
+import argparse
+import pandas as pd, 
+import numpy as np
 import pyodbc
+import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
-import joblib
-
+from sklearn.metrics import mean_squared_error, r2_score
+from azure.ai.ml import MLClient
+from azure.ai.ml.entities import Model
+from azure.identity import DefaultAzureCredential
 # Azure ML SDK imports
 from azureml.core import Run, Model, Dataset, Workspace
 
-def load_raw_df_from_sql():
-    server   = 'techentmarft2.database.windows.net'
-    database = 'QAECECRM_Mar2025'
-    username = 'dbadmin'
-    password = 'DashTech1234'
-    driver   = '{ODBC Driver 18 for SQL Server}'
-    conn_str = (
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train ECE Commission RF and register model")
+    parser.add_argument("--connection‐string", type=str, required=True, help="ODBC connection string")
+    parser.add_argument("--model‐output‐path", type=str, default="outputs/model", help="Where to save the trained model")
+    parser.add_argument("--subscription‐id", type=str, required=True)
+    parser.add_argument("--resource‐group", type=str, required=True)
+    parser.add_argument("--workspace‐name", type=str, required=True)
+    return parser.parse_args()
+
+conn_str = (
         f"DRIVER={driver};SERVER={server};PORT=1433;"
         f"DATABASE={database};UID={username};PWD={password}"
     )
+
+def pull_data(conn_str):
+    sql = """
+    SELECT
+      ca.ECECommission, ca.Gross, ca.ContractId, ca.ArtistId,
+      c.AgentId, c.PresenterId, c.VenueId, c.LineOfBusinessId,
+      c.ContractStatusId, c.IsBackendDeal, c.EventTypeId,
+      v.Capacity AS VenueCapacity, v.PhysicalCity AS VenueCity,
+      v.IsSettingCovered, v.PhysicalGeoLatitude,
+      v.PhysicalGeoLongitude, b.EventBudget, b.EventTime,
+      b.IsClosed, b.ClosedReasonId, ced.EventDate,
+      r.MailingCity AS ResellerCity, r.MailingStateId AS ResellerStateId,
+      et.Name AS EventTypeName, p.OrganizationName AS PresenterOrg,
+      ac.OriginalAmount, act.TransactionAmount,
+      ap.LineOfBusinessId AS LineOfBusinessId, lp.EcePercentage,
+      lp.ArtistPercentage, ot.ECEProcurementFee, c.ECECommissionRate
+    FROM ContractArtist ca
+    LEFT JOIN Contract c ON ca.ContractId = c.ContractId
+    LEFT JOIN Venue v ON c.VenueId = v.VenueId
+    LEFT JOIN BlueCard b ON c.BlueCardId = b.BlueCardId
+    LEFT JOIN ContractEventDate ced ON c.ContractId = ced.ContractId
+    LEFT JOIN Reseller r ON c.ResellerId = r.ResellerId
+    LEFT JOIN LuEventType et ON c.EventTypeId = et.EventTypeId
+    LEFT JOIN Presenter p ON c.PresenterId = p.PresenterId
+    LEFT JOIN ArtistCharge ac ON ca.ContractArtistId = ac.ArtistId
+    LEFT JOIN ArtistChargeTransaction act ON ac.ArtistChargeId = act.ArtistChargeId
+    LEFT JOIN ArtistProgram ap ON ca.ArtistId = ap.ArtistId
+    LEFT JOIN LuProgram lp ON ap.ProgramId = lp.ProgramId
+    LEFT JOIN OfferTerms ot ON ca.ArtistId = ot.ArtistId
+    """
     cnxn = pyodbc.connect(conn_str)
-    sql = """<paste your feature_sql here>"""  # your long SELECT…JOIN query
-    return pd.read_sql(sql, cnxn)
+    df = pd.read_sql(sql, cnxn)
+    return df
+
 
 def clean_and_featurize(df):
     # exactly your cleaning code from the notebook
@@ -93,6 +132,16 @@ def main():
                    model_name="ece_commission_rf",
                    tags={"method":"RandomForest"},
                    description="RF predicting ECECommission")
+   
+    # 6) Register to Azure ML
+    credential = DefaultAzureCredential()
+    ml_client = MLClient(
+        credential,
+        subscription_id=args.subscription_id,
+        resource_group_name=args.resource_group,
+        workspace_name=args.workspace_name
+    )
+    register_model(ml_client, args.model_output_path)
 
     run.complete()
 
