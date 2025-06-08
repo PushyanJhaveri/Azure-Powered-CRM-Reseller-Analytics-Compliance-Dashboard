@@ -5,7 +5,7 @@
 
 ---
 
-## 🚀 Project Overview
+## Project Overview
 
 This end-to-end solution:
 
@@ -15,6 +15,9 @@ This end-to-end solution:
 4. **Registers & deploys** tge best model as a real-time endpoint  
 5. **Visualizes** commissions, compliance flags & forecasts in Tableau  
 
+---
+
+## Tech Stack
 
 - **Language & Libraries:** Python 3.10, Pandas, NumPy, Scikit-Learn, XGBoost, Matplotlib  
 - **Cloud & MLOps:** Azure SQL, Azure Machine Learning (SDK v2), Azure Blob Storage, Managed Online Endpoints  
@@ -23,7 +26,7 @@ This end-to-end solution:
 
 ---
 
-## ⚡️ Quickstart
+## Quickstart
 
 1. **Clone repo**  
    ```bash
@@ -34,21 +37,28 @@ This end-to-end solution:
     ```bash
     pip install -r requirements.txt
     ```
-4. **Configure Azure credentials**
+3. **Configure Azure environment variables**
     ```bash
     export AZURE_SUBSCRIPTION_ID="<your-subscription-id>"
     export AZURE_RESOURCE_GROUP="<your-resource-group>"
     export AZURE_WORKSPACE_NAME="<your-workspace-name>"
     ```
-5. **Run training**
+4. **Training and register the model**
    ```bash
    python src/train.py
    ```
-6. **Deploy & score**
+5. **Deploy the model as custom component**
    ```bash
    az ml job create --file azure/train_component.yml
    az ml online-endpoint invoke --name <endpoint-name> --request-file sample-request.json
    ```
+6. **Test the deployed endpoint**
+    ```bash
+   az ml online-endpoint invoke \
+     --name <your-endpoint-name> \
+     --deployment blue \
+     --request-file deploy/sample-request.json
+    ```
 
 ---
 
@@ -58,7 +68,7 @@ This end-to-end solution:
 ece-commission-analytics/
 │
 ├── README.md                       ← This file  
-├── LICENSE                         ← MIT License  
+├── LICENSE                         ← Licenses  
 ├── .gitignore                      
 ├── requirements.txt                ← pip packages  
 ├── conda_env.yaml                  ← (optional) conda spec  
@@ -88,11 +98,14 @@ ece-commission-analytics/
         ├── feature_importance.png  
         └── deployment_architecture.png  
 ```
+---
 
+## 📂 Model Performance
 
 | Model                        |   RMSE   |   MAE  |   R²  |
 | ---------------------------- | :------: | :----: | :---: |
 | **Random Forest (baseline)** | 2,790.29 | 305.29 | 0.849 |
+| **Random Forest (tuned)**    | 2,650.1  | 290.4  | 0.865 |
 | HistGradientBoosting         | 1,406.42 | 247.48 | 0.812 |
 | XGBoost (tuned)              | 3,163.04 | 371.34 | 0.807 |
 
